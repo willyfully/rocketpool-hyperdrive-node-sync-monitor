@@ -8,6 +8,9 @@ The service sends an email if the service stops.
 
 The script runs the rocketpool node sync or hyperdrive service sync commands and parses the output to check if the node is synced.
 
+## Credits
+Thanks Cursor + Claude 3.5 sonnet for the huge help!
+
 ## Installation:
 1. Create the installation directory and copy files:
    ```bash
@@ -73,7 +76,7 @@ hyperdrive = hyperdrive,/home/USER/.hyperdrive
 Note: The `config.ini` file is ignored by git to keep your private information secure. Never commit your actual config.ini file to the repository.
 
 ## Maintenance
-Check servicestatus:
+Check service status:
    ```bash
    sudo systemctl status rocketpool_monitor
    ```
