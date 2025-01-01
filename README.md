@@ -61,6 +61,21 @@ Copy `config.template.ini` to `config.ini` and edit the following settings:
 - CHECK_INTERVAL: Time between checks in seconds (default: 300)
 - DAILY_REPORT_TIME: Time for daily report (format: "HH:MM")
 
+### Nodes Configuration
+In the [Nodes] section, each line defines a node to monitor:
+```ini
+node_name = type,data_dir
+```
+- node_name: Name to identify the node in notifications
+- type: Either 'rocketpool' or 'hyperdrive'
+- data_dir: Path to the node's data directory
+
+Example:
+```ini
+rp1 = rocketpool,/home/USER/.rocketpool
+hyperdrive = hyperdrive,/home/USER/.hyperdrive
+```
+
 Note: The `config.ini` file is ignored by git to keep your private information secure. Never commit your actual config.ini file to the repository.
 
 

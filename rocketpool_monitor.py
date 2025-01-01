@@ -1,12 +1,11 @@
 import configparser
 import os
+from datetime import datetime, timedelta
 
 # Load configuration
 config = configparser.ConfigParser()
 script_dir = os.path.dirname(os.path.abspath(__file__))
 config_path = os.path.join(script_dir, 'config.ini')
-print(script_dir)
-print(config_path)
 if not os.path.exists(config_path):
     raise FileNotFoundError(f"Configuration file not found at {config_path}. Please copy config.template.ini to config.ini and edit it.")
 config.read(config_path)
@@ -14,10 +13,6 @@ config.read(config_path)
 # Replace the hardcoded paths with config values
 ROCKETPOOL_BIN = config.get('Paths', 'ROCKETPOOL_BIN')
 HYPERDRIVE_BIN = config.get('Paths', 'HYPERDRIVE_BIN')
-ROCKETPOOL_DATA_DIR = config.get('Paths', 'ROCKETPOOL_DATA_DIR')
-ROCKETPOOL_DATA_DIR2 = config.get('Paths', 'ROCKETPOOL_DATA_DIR2')
-ROCKETPOOL_DATA_DIR3 = config.get('Paths', 'ROCKETPOOL_DATA_DIR3')
-HYPERDRIVE_DATA_DIR = config.get('Paths', 'HYPERDRIVE_DATA_DIR')
 
 # Get other configuration values
 CHECK_INTERVAL = config.getint('Monitor', 'CHECK_INTERVAL')
@@ -29,6 +24,22 @@ SMTP_PORT = config.getint('Email', 'SMTP_PORT')
 SMTP_USERNAME = config.get('Email', 'SMTP_USERNAME')
 SMTP_PASSWORD = config.get('Email', 'SMTP_PASSWORD')
 RECIPIENT_EMAIL = config.get('Email', 'RECIPIENT_EMAIL')
+
+# Build node configurations dynamically
+rp_configs = []
+for node_name in config['Nodes']:
+    node_type, data_dir = config.get('Nodes', node_name).split(',')
+    if node_type == 'rocketpool':
+        command = f'{ROCKETPOOL_BIN} --allow-root -c {data_dir} node sync'
+    elif node_type == 'hyperdrive':
+        command = f'{HYPERDRIVE_BIN} --allow-root -c {data_dir} service sync'
+    else:
+        continue  # Skip invalid node types
+        
+    rp_configs.append({
+        'alias': node_name,
+        'command': command
+    })
 
 import subprocess
 from datetime import datetime
@@ -77,6 +88,13 @@ class RocketpoolMonitor:
                 for client_type, is_synced in statuses.items():
                     key = f"{rp_config['alias']}:{client_type}"
                     self.sync_issues[key] = is_synced
+
+        # Initialize next report time
+        report_hour, report_minute = map(int, DAILY_REPORT_TIME.strip('"').split(':'))
+        next_report = datetime.now().replace(hour=report_hour, minute=report_minute, second=0, microsecond=0)
+        if next_report <= datetime.now():
+            next_report += timedelta(days=1)
+        self.next_report_time = next_report
 
     def send_email(self, subject, message):
         """Send email using smtplib with external SMTP server"""
@@ -203,22 +221,28 @@ class RocketpoolMonitor:
         return "\n".join(summary_lines)
 
     def print_daily_summary(self):
-        """Print a summary of all clients' status"""
+        """Send a daily summary email"""
         summary = f"\n=== Daily Summary ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')}) ===" + self.get_status_summary()
-        self.log_and_notify(summary)
+        # Send daily summary as a separate email
+        self.send_email("📊 Rocketpool Daily Status Report", summary)
+        self.logger.info("Daily summary sent")
 
     def check_all_nodes(self):
         """Check all rocketpool nodes and send batch notification"""
+        current_time = datetime.now()
+        
+        # Check if it's time for daily report
+        if current_time >= self.next_report_time:
+            # Send daily summary first
+            self.print_daily_summary()
+            # Calculate next report time (24 hours from last scheduled time)
+            self.next_report_time += timedelta(days=1)
+            self.logger.info(f"Next daily report scheduled for {self.next_report_time}")
+        
+        # Start fresh for status change notifications
         self.current_messages = []
         status_changed = False
         all_current_statuses = {}
-        
-        current_time = datetime.now()
-        current_day = current_time.date()
-        
-        if self.last_summary_day != current_day and current_time.hour == 0 and current_time.minute < 5:
-            self.print_daily_summary()
-            self.last_summary_day = current_day
         
         self.logger.debug("Current sync_issues state:")
         for key, value in self.sync_issues.items():
@@ -302,26 +326,6 @@ if __name__ == "__main__":
         'to': RECIPIENT_EMAIL
     }
     
-    # Rocketpool configuration
-    rp_configs = [
-        {
-            'alias': 'rp1',
-            'command': f'{ROCKETPOOL_BIN} --allow-root -c {ROCKETPOOL_DATA_DIR} node sync'
-        },
-        {
-            'alias': 'rp2',
-            'command': f'{ROCKETPOOL_BIN} --allow-root -c {ROCKETPOOL_DATA_DIR2} node sync'
-        },
-        {
-            'alias': 'rp3',
-            'command': f'{ROCKETPOOL_BIN} --allow-root -c {ROCKETPOOL_DATA_DIR3} node sync'
-        },
-        {
-            'alias': 'hyperdrive',
-            'command': f'{HYPERDRIVE_BIN} --allow-root -c {HYPERDRIVE_DATA_DIR} service sync'
-        }
-    ]
-    
     monitor = RocketpoolMonitor(rp_configs, email_config, args.log_level)
     
     # Send startup message with initial status
@@ -330,17 +334,12 @@ if __name__ == "__main__":
     monitor.send_email("🚀 Rocketpool Monitor Starting", start_message)
     
     while True:
-        start_time = datetime.now()
         monitor.check_all_nodes()
         
-        # Calculate time until next check interval
+        # Calculate time until next check using absolute time
         current_time = datetime.now()
-        minutes_to_next = CHECK_INTERVAL/60 - (current_time.minute % (CHECK_INTERVAL/60))
-        seconds_to_next = minutes_to_next * 60 - current_time.second
+        current_seconds = int(current_time.timestamp())
+        seconds_to_next = CHECK_INTERVAL - (current_seconds % CHECK_INTERVAL)
         
-        # If we're very close to the next interval, add one full interval
-        if seconds_to_next < 10:
-            seconds_to_next += CHECK_INTERVAL
-            
-        monitor.logger.info(f"Next check in {seconds_to_next} seconds")
+        monitor.logger.info(f"Next check in {seconds_to_next:.1f} seconds")
         time.sleep(seconds_to_next)
