@@ -9,7 +9,7 @@ The service sends an email if the service stops.
 The script runs the rocketpool node sync or hyperdrive service sync commands and parses the output to check if the node is synced.
 
 ## Credits
-Thanks Cursor + Claude 3.5 sonnet for the huge help!
+Special thanks to Cursor and Claude 3.5 Sonnet AI assistant for their invaluable contributions!
 
 ## Installation:
 1. Create the installation directory and copy files:
