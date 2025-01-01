@@ -12,32 +12,30 @@ The script runs the rocketpool node sync or hyperdrive service sync commands and
 1. This script uses mailx to send emails. Install and test mailx on your system if it is not already installed.
 2. Create the installation directory and copy files:
    ```bash
-   sudo mkdir -p /opt/rocketpool-monitor
-   sudo cp rocketpool_monitor.py send_stop_notification.py config.template.ini /opt/rocketpool-monitor/
+   sudo mkdir -p /opt/rocketpool_monitor
+   sudo cp rocketpool_monitor.py send_stop_notification.py config.template.ini /opt/rocketpool_monitor/
    ```
-3. Copy and configure the settings:
+3. Copy and configure the settings (see details below):
    ```bash
-   sudo cp /opt/rocketpool-monitor/config.template.ini /opt/rocketpool-monitor/config.ini
-   sudo nano /opt/rocketpool-monitor/config.ini
+   sudo cp /opt/rocketpool_monitor/config.template.ini /opt/rocketpool_monitor/config.ini
+   sudo nano /opt/rocketpool_monitor/config.ini
    ```
-4. Copy and edit the service file:
+4. Copy the service file:
    ```bash
-   sudo cp rocketpool-monitor.service /etc/systemd/system/
-   sudo nano /etc/systemd/system/rocketpool-monitor.service
+   sudo cp rocketpool_monitor.service /etc/systemd/system/
    ```
-   Replace `/home/USER/scripts/` with your actual script path
 5. Reload systemd: sudo systemctl daemon-reload
-6. Enable the service to start at boot: sudo systemctl enable rocketpool-monitor
-7. Start the service: sudo systemctl start rocketpool-monitor
-8. Check status: sudo systemctl status rocketpool-monitor
-9. View logs: sudo journalctl -u rocketpool-monitor -f or: sudo journalctl -u rocketpool-monitor
+6. Enable the service to start at boot: sudo systemctl enable rocketpool_monitor
+7. Start the service: sudo systemctl start rocketpool_monitor
+8. Check status: sudo systemctl status rocketpool_monitor
+9. View logs: sudo journalctl -u rocketpool_monitor -f or: sudo journalctl -u rocketpool_monitor
 
 The script can also be run manually with:
-/usr/bin/python3 /home/USER/scripts/rocketpool_monitor.py --log-level INFO
+/usr/bin/python3 /opt/rocketpool_monitor/rocketpool_monitor.py --log-level INFO
 Log levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 ## Configuration
-Copy `config.template.ini` to `config.ini` and edit the following settings:
+In `config.ini` (copy of `config.template.ini`) edit the following settings:
 
 ### Email Settings
 - SMTP_SERVER: Your email server address
@@ -47,19 +45,8 @@ Copy `config.template.ini` to `config.ini` and edit the following settings:
 - RECIPIENT_EMAIL: Where to send monitoring emails
 
 ### Paths
-#### Rocketpool Paths
 - ROCKETPOOL_BIN: Path to rocketpool binary (e.g., /home/USER/bin/rocketpool)
-- ROCKETPOOL_DATA_DIR: Main rocketpool data directory (e.g., /home/USER/.rocketpool)
-- ROCKETPOOL_DATA_DIR2: Secondary rocketpool data directory (if used)
-- ROCKETPOOL_DATA_DIR3: Tertiary rocketpool data directory (if used)
-
-#### Hyperdrive Paths
 - HYPERDRIVE_BIN: Path to hyperdrive binary (e.g., /usr/bin/hyperdrive)
-- HYPERDRIVE_DATA_DIR: Hyperdrive data directory (e.g., /home/USER/.hyperdrive)
-
-### Monitor Settings
-- CHECK_INTERVAL: Time between checks in seconds (default: 300)
-- DAILY_REPORT_TIME: Time for daily report (format: "HH:MM")
 
 ### Nodes Configuration
 In the [Nodes] section, each line defines a node to monitor:
@@ -73,8 +60,14 @@ node_name = type,data_dir
 Example:
 ```ini
 rp1 = rocketpool,/home/USER/.rocketpool
+rp2 = rocketpool,/home/USER/.rocketpool2
+rp3 = rocketpool,/home/USER/.rocketpool3
 hyperdrive = hyperdrive,/home/USER/.hyperdrive
 ```
+
+### Monitor Settings
+- CHECK_INTERVAL: Time between checks in seconds (default: 300)
+- DAILY_REPORT_TIME: Time for daily report (format: "HH:MM")
 
 Note: The `config.ini` file is ignored by git to keep your private information secure. Never commit your actual config.ini file to the repository.
 
