@@ -1,0 +1,15 @@
+[Unit]
+Description=Rocketpool Node Sync Monitor
+After=network.target
+
+[Service]
+Type=simple
+User=root
+# Adjust the paths to fit your system
+ExecStart=/usr/bin/python3 /opt/rocketpool_monitor/rocketpool_monitor.py --log-level INFO
+ExecStopPost=/usr/bin/python3 /opt/rocketpool_monitor/send_stop_notification.py
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

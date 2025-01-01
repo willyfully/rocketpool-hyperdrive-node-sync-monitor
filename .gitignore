@@ -1,0 +1,8 @@
+# Existing entries...
+node_modules/
+.env
+.DS_Store
+*.log
+
+# Only ignore the actual config file, not the template
+config.ini
